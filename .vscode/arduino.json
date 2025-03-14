@@ -1,0 +1,5 @@
+{
+    "board": "arduino:avr:uno",
+    "output": ".arduino/output",
+    "sketch": "Tank/control_ps4_latest_version1_18_25_143/control_ps4_latest_version1_18_25_143.ino"
+}
