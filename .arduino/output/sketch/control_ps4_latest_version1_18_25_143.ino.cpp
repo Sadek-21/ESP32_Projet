@@ -8,6 +8,7 @@ int enableRightMotor = 22;
 int rightMotorPin1 = 15;
 int rightMotorPin2 = 21;
 
+
 // Left motor
 int enableLeftMotor = 23;
 int leftMotorPin1 = 18;
@@ -44,6 +45,11 @@ bool buzzerState = false;       // Current state of the buzzer
 bool lastSquareButtonState = false; // Previous state of the Square button
 unsigned long lastDebounceTime = 0; // Timestamp for debouncing
 const unsigned long debounceDelay = 50; // Debounce delay in milliseconds
+
+
+// Servo positions
+int servo1Position = 40; // Initial position for servo1 (up/down)
+int servo2Position = 90; // Initial position for servo2 (left/right)
 
 // Function to control motors
 void rotateMotor(int rightMotorSpeed, int leftMotorSpeed) {
@@ -100,40 +106,41 @@ void setUpPinModes() {
   servo1.attach(servo1Pin);
   servo2.attach(servo2Pin);
   // Set initial servo positions
-  servo1.write(40);
-  servo2.write(90);
+  servo1.write(servo1Position);
+  servo2.write(servo2Position);
   // Stop motors
   rotateMotor(0, 0);
 }
 
 // Notify function for PS4 controller inputs
 void notify() {
-  // Motor control with joysticks
-  int rightMotorSpeed = map(PS4.RStickY(), -127, 127, -MAX_SPEED, MAX_SPEED);
-  int leftMotorSpeed = map(PS4.LStickY(), -127, 127, -MAX_SPEED, MAX_SPEED);
+  // Motor control with right joystick (differential drive)
+  int forwardSpeed = map(PS4.RStickY(), -127, 127, -MAX_SPEED, MAX_SPEED); // Forward/backward
+  int turnSpeed = map(PS4.RStickX(), -127, 127, -MAX_SPEED, MAX_SPEED);    // Left/right
 
+  // Calculate motor speeds for differential drive
+  int rightMotorSpeed = forwardSpeed - turnSpeed;
+  int leftMotorSpeed = forwardSpeed + turnSpeed;
+
+  // Constrain motor speeds to valid range
   rightMotorSpeed = constrain(rightMotorSpeed, -MAX_SPEED, MAX_SPEED);
   leftMotorSpeed = constrain(leftMotorSpeed, -MAX_SPEED, MAX_SPEED);
 
+  // Apply motor speeds
   rotateMotor(rightMotorSpeed, leftMotorSpeed);
 
 
-  if (PS4.Up()) {
-    servo1.write(constrain(servo1.read() + 5, 0, 50)); // Move servo1 up
-    Serial.println("Servo 1 moving up");
-    }
-  if (PS4.Down()) {
-    servo1.write(constrain(servo1.read() - 5, 0, 35)); // Move servo1 down
-    Serial.println("Servo 1 moving down");
-    }
-  if (PS4.Left()) {
-    servo2.write(constrain(servo2.read() - 5, 0, 180)); // Move servo2 left
-    Serial.println("Servo 2 moving left");
-    }
-  if (PS4.Right()) {
-    servo2.write(constrain(servo2.read() + 5, 0, 180)); // Move servo2 right
-    Serial.println("Servo 2 moving right");
-    }
+  // Servo control with left joystick
+  int servo1Delta = map(PS4.LStickY(), -127, 127, -5, 5); // Small increments for smooth movement
+  int servo2Delta = map(PS4.LStickX(), -127, 127, -5, 5);
+
+  // Update servo positions
+  servo1Position = constrain(servo1Position + servo1Delta, 0, 50); // Limit servo1 range
+  servo2Position = constrain(servo2Position + servo2Delta, 0, 180); // Limit servo2 range
+
+  // Write new positions to servos
+  servo1.write(servo1Position);
+  servo2.write(servo2Position);
   
 
   // Buzzer control with Square button (with debouncing)
