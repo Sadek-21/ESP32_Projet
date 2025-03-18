@@ -2,12 +2,15 @@
 #include <WiFi.h>
 #include <ESP32Servo.h>
 
+
 #define CAMERA_MODEL_AI_THINKER
 #include "camera_pins.h"
 
+
 // Servo Configuration
 #define PAN_PIN 14   // GPIO pin for the pan servo
-#define TILT_PIN 15  // GPIO pin for the tilt servo
+#define TILT_PIN 2  // GPIO pin for the tilt servo
+
 
 Servo panServo;  // Servo for X-axis (pan)
 Servo tiltServo; // Servo for Y-axis (tilt)
@@ -27,11 +30,10 @@ const int INITIAL_TILT = 90; // Center position for tilt servo
 const char* ssid = "HUAWEI-1CFEJ9";
 const char* password = "20242024";
 
-//const char* ssid = "Prestige room vip";
-//const char* password = "prestige2025";
 
 // TCP Server Configuration
 WiFiServer server(82);  // Create a TCP server on port 81
+
 
 void startCameraServer();
 void setupLedFlash(int pin);
@@ -42,6 +44,7 @@ void resetServos() {
   tiltServo.write(INITIAL_TILT);
   Serial.println("Servos reset to initial positions");
 }
+
 
 void controlRedLED(bool detected) {
   static unsigned long lastToggleTime = 0;
@@ -59,19 +62,18 @@ void controlRedLED(bool detected) {
   }
 }
 
+
 void setup() {
   Serial.begin(115200);
-  Serial2.begin(115200); // Initialize UART communication (TX2/RX2 pins)
   Serial.setDebugOutput(true);
   Serial.println();
 
-  pinMode(RED_LED_PIN, OUTPUT);  // Initialize the red LED pin as output
-
-  // Initialize servos
+    // Initialize servos
   panServo.attach(PAN_PIN);
   tiltServo.attach(TILT_PIN);
-  panServo.write(90); // Initial position
-  tiltServo.write(90); // Initial position
+  /*panServo.write(INITIAL_PAN); // Initial position
+  tiltServo.write(INITIAL_TILT); // Initial position*/
+
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -171,7 +173,8 @@ void setup() {
 
   startCameraServer();
 
-   // Start the TCP server
+
+     // Start the TCP server
   server.begin();
   Serial.println("TCP server started");
 
@@ -181,8 +184,8 @@ void setup() {
 
 
 }
-
 void loop() {
+
   // Check for TCP client connections
   WiFiClient client = server.available();
   if (client) {
@@ -208,7 +211,7 @@ void loop() {
           Serial.printf("Received: Pan=%d, Tilt=%d, Detected=%d\n", xPos, yPos, detected);
           client.println("OK"); // Send a response back to the client
 
-          // Control the red LED based on detection status
+         // Control the red LED based on detection status
           controlRedLED(detected);
         } else {
           Serial.println("Invalid data format");
@@ -221,30 +224,6 @@ void loop() {
     Serial.println("Client disconnected");
   }
 
-/*if we want to use the COM Port */
-  // Check for incoming serial data
-  if (Serial.available()) {
-    String command = Serial.readStringUntil('\n');
-    command.trim();
 
-    // Process servo angles and detection status (format: "pan_angle,tilt_angle,detected")
-    int commaIndex1 = command.indexOf(',');
-    int commaIndex2 = command.indexOf(',', commaIndex1 + 1);
-    if (commaIndex1 > 0 && commaIndex2 > 0) {
-      int xPos = command.substring(0, commaIndex1).toInt();
-      int yPos = command.substring(commaIndex1 + 1, commaIndex2).toInt();
-      bool detected = command.substring(commaIndex2 + 1).toInt();
-      xPos = constrain(xPos, 0, 180);    // Pan servo range
-      yPos = constrain(yPos, 60, 100);   // Tilt servo range
-      panServo.write(xPos);
-      tiltServo.write(yPos);
-      Serial.printf("Received: Pan=%d, Tilt=%d, Detected=%d\n", xPos, yPos, detected);
 
-      // Control the red LED based on detection status
-      controlRedLED(detected);
-    } else {
-      Serial.println("Invalid data format");
-      controlRedLED(false);  // No detection
-    }
-  }
 }
